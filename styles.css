@@ -704,6 +704,98 @@ section { padding-block: var(--space-2xl); position: relative; }
 .gallery-tile:hover img { transform: scale(1.06); }
 .gallery-tile::after { content: ""; position: absolute; inset: auto 0 0 0; height: 55%; background: linear-gradient(to top, rgba(30, 34, 41, 0.8), transparent); pointer-events: none; }
 .gallery-tile__caption { position: absolute; left: 0; right: 0; bottom: 0; padding: 1rem; color: #fff; font-size: 0.85rem; font-weight: 600; z-index: 2; }
+.gallery-tile { cursor: pointer; }
+.gallery-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* -------------------------------------------------------------------------
+   14b. GALLERY LIGHTBOX (gallery.html only — opens a tile at full size
+   with its category tag and caption)
+   ------------------------------------------------------------------------- */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  background: rgba(18, 20, 24, 0.92);
+  opacity: 0;
+  visibility: hidden;
+  touch-action: none;
+  transition: opacity var(--dur-med) var(--ease), visibility var(--dur-med);
+}
+.lightbox.is-open { opacity: 1; visibility: visible; }
+.lightbox__content {
+  position: relative;
+  max-width: min(900px, 92vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: scale(0.96);
+  transition: transform var(--dur-med) var(--ease);
+}
+.lightbox.is-open .lightbox__content { transform: scale(1); }
+.lightbox__img {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  width: auto;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  background: var(--paper-alt);
+}
+.lightbox__tag {
+  align-self: flex-start;
+  margin-top: var(--space-sm);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+}
+.lightbox__caption {
+  margin-top: 0.6rem;
+  color: #fff;
+  font-size: 0.98rem;
+  font-weight: 600;
+  text-align: left;
+  align-self: flex-start;
+}
+.lightbox__close,
+.lightbox__nav {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  transition: background var(--dur-fast), border-color var(--dur-fast);
+  z-index: 501;
+}
+.lightbox__close:hover,
+.lightbox__nav:hover { background: rgba(255, 255, 255, 0.22); border-color: #fff; }
+.lightbox__close svg,
+.lightbox__nav svg { width: 20px; height: 20px; }
+.lightbox__close { top: var(--space-md); right: var(--space-md); }
+.lightbox__nav--prev { left: var(--space-md); top: 50%; transform: translateY(-50%); }
+.lightbox__nav--next { right: var(--space-md); top: 50%; transform: translateY(-50%); }
+@media (max-width: 700px) {
+  .lightbox__nav--prev { left: 8px; }
+  .lightbox__nav--next { right: 8px; }
+  .lightbox__close { top: 10px; right: 10px; }
+  .lightbox__close, .lightbox__nav { width: 40px; height: 40px; }
+}
+html.lightbox-open,
+body.lightbox-open { overflow: hidden; }
 
 /* -------------------------------------------------------------------------
    15. TESTIMONIALS

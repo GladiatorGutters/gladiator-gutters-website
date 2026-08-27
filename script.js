@@ -84,6 +84,8 @@
     initFooterYear();
     initFloatingCallButton();
     initGalleryFilter();
+    initGalleryLightbox();
+    initImageFallback();
   });
 
   /* ---------------------------------------------------------------------
@@ -107,11 +109,21 @@
     const panel = document.querySelector(".mobile-nav");
     if (!toggle || !panel) return;
 
+    const closeMobileNav = () => {
+      toggle.setAttribute("aria-expanded", "false");
+      panel.classList.remove("is-open");
+      document.body.style.overflow = "";
+    };
+
     toggle.addEventListener("click", () => {
       const isOpen = toggle.getAttribute("aria-expanded") === "true";
-      toggle.setAttribute("aria-expanded", String(!isOpen));
-      panel.classList.toggle("is-open", !isOpen);
-      document.body.style.overflow = !isOpen ? "hidden" : "";
+      if (isOpen) {
+        closeMobileNav();
+      } else {
+        toggle.setAttribute("aria-expanded", "true");
+        panel.classList.add("is-open");
+        document.body.style.overflow = "hidden";
+      }
     });
 
     panel.querySelectorAll("[data-accordion-trigger]").forEach((trigger) => {
@@ -124,14 +136,21 @@
       });
     });
 
-    // Close the panel when a real link is followed
+    // Close the panel when a real link inside it is followed
     panel.querySelectorAll("a[href]").forEach((link) => {
-      link.addEventListener("click", () => {
-        toggle.setAttribute("aria-expanded", "false");
-        panel.classList.remove("is-open");
-        document.body.style.overflow = "";
-      });
+      link.addEventListener("click", closeMobileNav);
     });
+
+    // The header's own "Free Quote" button sits outside the mobile-nav panel
+    // (next to the hamburger). If the menu is open and this is tapped, the
+    // page jumps to #quote but the panel used to stay open on top of it —
+    // close it here too, same as any in-panel link would.
+    const headerQuoteBtn = document.querySelector(".header__actions .btn--accent");
+    if (headerQuoteBtn) {
+      headerQuoteBtn.addEventListener("click", () => {
+        if (panel.classList.contains("is-open")) closeMobileNav();
+      });
+    }
   }
 
   /* ---------------------------------------------------------------------
@@ -460,6 +479,122 @@
           tile.style.display = show ? "" : "none";
         });
       });
+    });
+  }
+
+  /* ---------------------------------------------------------------------
+     10. Gallery lightbox (gallery.html only) — clicking a photo opens it
+         at full size with its category tag and caption. Prev/Next cycle
+         through whichever tiles are currently visible (respecting the
+         active filter pill), not the full unfiltered set.
+     --------------------------------------------------------------------- */
+  function initGalleryLightbox() {
+    const grid = document.querySelector("[data-gallery-grid]");
+    const lightbox = document.querySelector("[data-lightbox]");
+    if (!grid || !lightbox) return;
+
+    const tiles = Array.from(grid.querySelectorAll(".gallery-tile"));
+    const imgEl = lightbox.querySelector("[data-lightbox-img]");
+    const tagEl = lightbox.querySelector("[data-lightbox-tag]");
+    const captionEl = lightbox.querySelector("[data-lightbox-caption]");
+    const closeBtn = lightbox.querySelector("[data-lightbox-close]");
+    const prevBtn = lightbox.querySelector("[data-lightbox-prev]");
+    const nextBtn = lightbox.querySelector("[data-lightbox-next]");
+
+    let currentIndex = -1;
+
+    function visibleTiles() {
+      return tiles.filter((t) => t.style.display !== "none");
+    }
+
+    function openAt(tile) {
+      const list = visibleTiles();
+      currentIndex = list.indexOf(tile);
+      render();
+      lightbox.classList.add("is-open");
+      lightbox.setAttribute("aria-hidden", "false");
+      document.documentElement.classList.add("lightbox-open");
+      document.body.classList.add("lightbox-open");
+      closeBtn.focus();
+    }
+
+    function render() {
+      const list = visibleTiles();
+      const tile = list[currentIndex];
+      if (!tile) return;
+      const img = tile.querySelector("img");
+      const tag = tile.querySelector(".gallery-tile__tag");
+      const caption = tile.querySelector(".gallery-tile__caption");
+      imgEl.src = img ? img.src : "";
+      imgEl.alt = img ? img.alt : "";
+      imgEl.style.visibility = ""; // clear any stale hidden state from a prior load
+      tagEl.textContent = tag ? tag.textContent : "";
+      tagEl.style.display = tag ? "" : "none";
+      captionEl.textContent = caption ? caption.textContent : "";
+    }
+
+    function close() {
+      lightbox.classList.remove("is-open");
+      lightbox.setAttribute("aria-hidden", "true");
+      document.documentElement.classList.remove("lightbox-open");
+      document.body.classList.remove("lightbox-open");
+    }
+
+    function step(delta) {
+      const list = visibleTiles();
+      if (!list.length) return;
+      currentIndex = (currentIndex + delta + list.length) % list.length;
+      render();
+    }
+
+    tiles.forEach((tile) => {
+      tile.setAttribute("tabindex", "0");
+      tile.setAttribute("role", "button");
+      tile.addEventListener("click", () => openAt(tile));
+      tile.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openAt(tile);
+        }
+      });
+    });
+
+    closeBtn.addEventListener("click", close);
+    prevBtn.addEventListener("click", () => step(-1));
+    nextBtn.addEventListener("click", () => step(1));
+
+    lightbox.addEventListener("click", (e) => {
+      if (e.target === lightbox) close();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (!lightbox.classList.contains("is-open")) return;
+      if (e.key === "Escape") close();
+      if (e.key === "ArrowRight") step(1);
+      if (e.key === "ArrowLeft") step(-1);
+    });
+  }
+
+  /* ---------------------------------------------------------------------
+     11. Image fallback — if a photo hasn't been added to /images/ yet (or
+         fails to load for any reason), hide the browser's native
+         broken-image glyph so the tile just shows its clean neutral
+         background instead of a stray icon floating over the card.
+     --------------------------------------------------------------------- */
+  function initImageFallback() {
+    document.querySelectorAll("img").forEach((img) => {
+      if (!img.getAttribute("src")) return; // nothing loaded yet — not a broken image
+      // Catches images that are already broken by the time this runs.
+      if (img.complete && img.naturalWidth === 0) {
+        img.style.visibility = "hidden";
+      }
+      img.addEventListener(
+        "error",
+        () => {
+          img.style.visibility = "hidden";
+        },
+        { once: true }
+      );
     });
   }
 })();
